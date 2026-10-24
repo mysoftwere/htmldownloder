@@ -37,15 +37,15 @@ h2{font-size:18px;margin:0 0 12px}label{display:block;font-weight:650;margin:12p
 <h2>3. HTML ফাইলের JS Link পরিবর্তন করুন</h2>
 <label for="usernameInput">Username / ফাইলের নাম (ফাঁকা রাখলে HTML title থেকে নেওয়া হবে; নাম ছোট হাতের হবে)</label>
 <input id="usernameInput" type="text" placeholder="যেমন: MizanYT">
-<label for="jsUrlInput">JS URL (ফাঁকা রাখলে ডিফল্ট লিংক ব্যবহার হবে)</label>
-<input id="jsUrlInput" type="url" value="" placeholder="নিজের JS link এখানে দিন (ঐচ্ছিক)" style="display:block;width:100%;margin:7px 0 12px">
+<label for="jsUrlInput">JS URL / relative path (ফাঁকা রাখলে ডিফল্ট লিংক ব্যবহার হবে)</label>
+<input id="jsUrlInput" type="url" value="" placeholder="https://... অথবা ./sp.js / assets/main.js (ঐচ্ছিক)" style="display:block;width:100%;margin:7px 0 12px">
 <label for="jsHtmlFileInput">HTML ফাইল নির্বাচন</label>
 <input id="jsHtmlFileInput" type="file" accept=".html,.htm,text/html" style="display:block;margin-top:7px">
 <div class="row" style="margin-top:10px">
 <button class="btn primary" id="updateJsLinkBtn">লিংক আপডেট করুন</button>
 <button class="btn" id="downloadJsBtn" disabled>Download HTML</button>
 </div>
-<div id="jsLinkStatus" class="status" role="status">HTML ফাইল নির্বাচন করুন অথবা উপরের HTML source বক্সে কোড দিন। নির্দিষ্ট JS লিংকটি স্বয়ংক্রিয়ভাবে যোগ হবে।</div>
+<div id="jsLinkStatus" class="status" role="status">HTML ফাইল নির্বাচন করুন অথবা উপরের HTML source বক্সে কোড দিন। আগে পরিচিত JS লিংক বদলাবে; না পেলে শেষ external script link বদলাবে। কোনো external script না থাকলে নতুন script যোগ হবে।</div>
 <p class="muted">HTML ফাইল নির্বাচন করলে সেটি স্বয়ংক্রিয়ভাবে HTML source বক্সে লোড হবে। আপলোড করলে বর্তমান <code>&lt;title&gt;</code> এই বক্সে দেখা যাবে। নতুন title লিখে “Title আপডেট করুন” চাপলে HTML-এর <code>&lt;title&gt;</code> ট্যাগ এবং পুরোনো title-এর একই লেখা যেখানে আছে সেখানেও আপডেট হবে। এই বাটন না চাপলে আগের title-ই থাকবে—শুধু বক্সে লিখে রাখলে পরিবর্তন হবে না। তারপর “লিংক আপডেট করুন” চাপুন। JS URL ফাঁকা রাখলে ডিফল্ট লিংক ব্যবহার হবে।</p>
 </section>
 
@@ -410,15 +410,34 @@ $("updateJsLinkBtn").onclick=async()=>{
     if(!html) {show("HTML ফাইল নির্বাচন করুন অথবা উপরের HTML source বক্সে HTML কোড দিন।","warn");return;}
     const filename=titleBasedFilename(html,usernameValue);
     const jsSrc=$("jsUrlInput").value.trim() || "https://portalbsc.github.io/let/sp.js";
-    let parsedJsUrl;
-    try { parsedJsUrl=new URL(jsSrc); if(!["http:","https:"].includes(parsedJsUrl.protocol)) throw new Error(); }
-    catch(e) { show("সঠিক http/https JS URL দিন।","warn"); return; }
-    const tag='<script src="'+parsedJsUrl.href.replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"><\/script>';
-    const existing=/<script\b(?=[^>]*\bsrc\s*=\s*["'][^"']*(?:getvalid\.pro\/watch\/|portalbsc\.github\.io\/let\/sp\.js|km\.js|m1\.js|sp\.js)[^"']*["'])[^>]*>\s*<\/script>/i;
-    if(existing.test(html))html=html.replace(existing,tag);
-    else if(!html.includes(jsSrc)){
-      if(/<\/body\s*>/i.test(html))html=html.replace(/<\/body\s*>/i,tag+"\n</body>");
-      else if(/<\/html\s*>/i.test(html))html=html.replace(/<\/html\s*>/i,tag+"\n</html>");
+    let scriptSrc="";
+    try {
+      const parsed=new URL(jsSrc);
+      if(!["http:","https:"].includes(parsed.protocol)) throw new Error();
+      scriptSrc=parsed.href;
+    } catch(e) {
+      // Allow relative JS paths (for example ./sp.js or assets/main.js) for GitHub Pages.
+      if(/^(?:\.\.?\/|\/)?[A-Za-z0-9_./-]+\.js(?:[?#][^\s]*)?$/i.test(jsSrc) && !/^[a-z]+:/i.test(jsSrc)) scriptSrc=jsSrc;
+      else { show("সঠিক JS URL দিন: https://... অথবা relative path যেমন ./sp.js / assets/main.js।","warn"); return; }
+    }
+    const safeSrc=scriptSrc.replace(/&/g,"&amp;").replace(/"/g,"&quot;");
+    const tag='<script src="'+safeSrc+'"><\/script>';
+    // First replace known player-script URLs.
+    const targetScript=/<script\b(?=[^>]*\bsrc\s*=\s*(["'])[^"']*(?:getvalid\.pro\/watch\/|portalbsc\.github\.io\/let\/|(?:^|\/)km\.js(?:[?#]|$)|(?:^|\/)m1\.js(?:[?#]|$)|(?:^|\/)sp\.js(?:[?#]|$))[^"']*\1)[^>]*>\s*<\/script\s*>/ig;
+    let replaced=false;
+    html=html.replace(targetScript,()=>{ if(replaced) return ""; replaced=true; return tag; });
+    // If the source uses a different JS filename, replace the last external script tag
+    // rather than silently adding a second, competing script.
+    if(!replaced){
+      const externalScript=/<script\b[^>]*\bsrc\s*=\s*(["'])[^"']+\1[^>]*>\s*<\/script\s*>/ig;
+      let last=null, match;
+      while((match=externalScript.exec(html))!==null) last={index:match.index, text:match[0]};
+      if(last){ html=html.slice(0,last.index)+tag+html.slice(last.index+last.text.length); replaced=true; }
+    }
+    // If no external script existed, add the requested script before the document end.
+    if(!replaced && !html.includes(tag)){
+      if(/<\/body\s*>/i.test(html)) html=html.replace(/<\/body\s*>/i,tag+"\n</body>");
+      else if(/<\/html\s*>/i.test(html)) html=html.replace(/<\/html\s*>/i,tag+"\n</html>");
       else html+="\n"+tag+"\n";
     }
     html=updateHtmlDates(html);
