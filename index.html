@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="bn" data-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1020"><title>TitleForge — URL & HTML Tool</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#121a2e;--panel2:#0e1628;--text:#eef2ff;--muted:#a8b3cc;--line:#2a3651;--accent:#8b9cff;--good:#73e0b0;--warn:#ffd27a;--bad:#ff9caa}
+html[data-theme="light"]{color-scheme:light;--bg:#f4f6fb;--panel:#fff;--panel2:#f7f9fe;--text:#182033;--muted:#59657b;--line:#dce2ee;--accent:#4358d8;--good:#087b50;--warn:#9a6100;--bad:#bd3348}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1000px;margin:auto;padding:28px 18px 60px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.brand{font-size:25px;font-weight:800;letter-spacing:-.6px}.brand span{color:var(--accent)}.sub{color:var(--muted);margin-top:3px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;margin-top:18px;box-shadow:0 12px 30px #00000012}
+h2{font-size:18px;margin:0 0 12px}label{display:block;font-weight:650;margin:12px 0 6px}textarea,input[type=url],input[type=text]{width:100%;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:11px;padding:12px;font:inherit;outline:none}textarea:focus,input:focus{border-color:var(--accent)}textarea{min-height:130px;resize:vertical}.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1}.btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:11px;padding:10px 14px;font:inherit;font-weight:700;cursor:pointer}.btn.primary{background:var(--accent);border-color:var(--accent);color:white}.btn:disabled{opacity:.45;cursor:not-allowed}.muted{color:var(--muted);font-size:13px}.status{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);white-space:pre-wrap}.status.good{color:var(--good)}.status.warn{color:var(--warn)}.status.bad{color:var(--bad)}.result{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.result:last-child{border-bottom:0}.titletext{flex:1;min-width:0;overflow-wrap:anywhere}.pill{display:inline-block;padding:3px 8px;border:1px solid var(--line);border-radius:99px;color:var(--muted);font-size:12px}.hidden{display:none!important}.link{color:var(--accent);overflow-wrap:anywhere}details{margin-top:12px}summary{cursor:pointer;color:var(--muted)}footer{margin-top:20px;color:var(--muted);font-size:12px;text-align:center}
+@media(max-width:600px){main{padding:18px 12px 40px}.panel{padding:15px}.row .btn{flex-basis:100%}.result{align-items:flex-start}}
+</style></head>
+<body><main>
+<header class="top"><div><div class="brand">Title<span>Forge</span></div><div class="sub">URL processor · HTML downloader · Title extractor</div></div><button id="themeBtn" class="btn" type="button">☀️ Light mode</button></header>
+<section class="panel">
+<h2>1. URL পেস্ট করে প্রসেস করুন</h2>
+<label for="urlInput">Source URL</label><input id="urlInput" type="url" placeholder="https://example.com/page?xml=...">
+<div class="row" style="margin-top:12px"><button class="btn primary" id="processBtn">Process URL</button><button class="btn" id="downloadResolvedBtn" disabled>Resolved HTML খুলুন / ডাউনলোড</button><button class="btn" id="clearBtn">Clear</button></div>
+<div id="status" class="status" role="status">URL পেস্ট করে Process URL চাপুন।</div>
+<div id="resolvedBox" class="hidden"><label>Resolved target URL</label><a id="resolvedLink" class="link" href="#" target="_blank" rel="noopener noreferrer"></a></div>
+<p class="muted">নোট: সাধারণ ওয়েবসাইটের CORS নীতির কারণে এই GitHub Pages অ্যাপ সব সাইটের HTML সরাসরি পড়তে পারবে না। Extension-এর <code>chrome.*</code> permissions এখানে নেই। URL resolve হলে লিংক দেখাবে; HTML ফাইল নিজে আপলোড/পেস্ট করলেও টাইটেল বের করতে পারবেন।</p>
+</section>
+<section class="panel">
+<h2>2. HTML পেস্ট করুন অথবা ফাইল দিন</h2>
+<label for="htmlInput">HTML source</label><textarea id="htmlInput" spellcheck="false" placeholder="এখানে HTML পেস্ট করুন..."></textarea>
+<label for="titleOverrideInput">HTML Title পরিবর্তন করুন (ঐচ্ছিক)</label><input id="titleOverrideInput" type="text" placeholder="এখানে নতুন title লিখুন; ফাঁকা রাখলে HTML-এর বর্তমান title থাকবে"><div class="row" style="margin-top:8px"><button class="btn" id="applyTitleBtn" type="button">Title আপডেট করুন</button><span class="muted" id="titleEditStatus" role="status" style="align-self:center">HTML ফাইল দিলে বর্তমান title এখানে দেখা যাবে।</span></div>
+<div class="row"><label style="flex:2">HTML ফাইল নির্বাচন <input id="fileInput" type="file" accept=".html,.htm,.txt,.xml,text/html,text/plain,application/xml" style="display:block;margin-top:7px"></label><button class="btn primary" id="extractBtn" style="align-self:end">Extract Titles</button><button class="btn" id="downloadHtmlBtn" style="align-self:end">Download HTML</button></div>
+<div class="row" style="align-items:center;margin-top:12px"><label for="dateChangeOption" style="flex:2;margin:0">HTML-এর তারিখ পরিবর্তন করবেন?</label><select id="dateChangeOption" style="flex:1;min-width:120px;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:11px;padding:12px;font:inherit"><option value="no" selected>NO</option><option value="yes">YES</option></select></div>
+<div id="calendarBox" class="row hidden" style="align-items:center;margin-top:10px"><label for="targetDate" style="flex:2;margin:0">ক্যালেন্ডার থেকে নতুন তারিখ নির্বাচন করুন</label><input id="targetDate" type="date" style="flex:1;min-width:150px;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:11px;padding:11px;font:inherit"></div>
+<p class="muted">ডিফল্ট NO থাকবে—তখন কোনো তারিখ বদলাবে না। YES করলে ক্যালেন্ডার থেকে বেছে নেওয়া তারিখ HTML-এর ভেতরের পরিচিত তারিখে বসবে। HTML-এর Title অপরিবর্তিত থাকবে।</p>
+<p class="muted">এখানে HTML দিলে শুধু <code>&lt;title&gt;</code> ট্যাগের টাইটেল সংগ্রহ করা হবে।</p>
+</section>
+
+<section class="panel" style="padding:14px 16px;max-width:720px">
+<h2>3. HTML ফাইলের JS Link পরিবর্তন করুন</h2>
+<label for="usernameInput">Username / ফাইলের নাম (ফাঁকা রাখলে HTML title থেকে নেওয়া হবে; নাম ছোট হাতের হবে)</label>
+<input id="usernameInput" type="text" placeholder="যেমন: MizanYT">
+<label for="jsUrlInput">JS URL (ফাঁকা রাখলে ডিফল্ট লিংক ব্যবহার হবে)</label>
+<input id="jsUrlInput" type="url" value="" placeholder="নিজের JS link এখানে দিন (ঐচ্ছিক)" style="display:block;width:100%;margin:7px 0 12px">
+<label for="jsHtmlFileInput">HTML ফাইল নির্বাচন</label>
+<input id="jsHtmlFileInput" type="file" accept=".html,.htm,text/html" style="display:block;margin-top:7px">
+<div class="row" style="margin-top:10px">
+<button class="btn primary" id="updateJsLinkBtn">লিংক আপডেট করুন</button>
+<button class="btn" id="downloadJsBtn" disabled>Download HTML</button>
+</div>
+<div id="jsLinkStatus" class="status" role="status">HTML ফাইল নির্বাচন করুন অথবা উপরের HTML source বক্সে কোড দিন। নির্দিষ্ট JS লিংকটি স্বয়ংক্রিয়ভাবে যোগ হবে।</div>
+<p class="muted">HTML ফাইল নির্বাচন করলে সেটি স্বয়ংক্রিয়ভাবে HTML source বক্সে লোড হবে। আপলোড করলে বর্তমান <code>&lt;title&gt;</code> এই বক্সে দেখা যাবে। নতুন title লিখে “Title আপডেট করুন” চাপলে HTML-এর <code>&lt;title&gt;</code> ট্যাগ এবং পুরোনো title-এর একই লেখা যেখানে আছে সেখানেও আপডেট হবে। এই বাটন না চাপলে আগের title-ই থাকবে—শুধু বক্সে লিখে রাখলে পরিবর্তন হবে না। তারপর “লিংক আপডেট করুন” চাপুন। JS URL ফাঁকা রাখলে ডিফল্ট লিংক ব্যবহার হবে।</p>
+</section>
+
+<section class="panel" id="bulkTitlePanel">
+<h2>HTML ফাইল নির্বাচন — Unlimited Titles</h2>
+<label for="bulkHtmlFiles">একসাথে একাধিক HTML ফাইল নির্বাচন করুন</label>
+<input id="bulkHtmlFiles" type="file" accept=".html,.htm,.xhtml,.txt,.xml,text/html,text/plain,application/xml" multiple style="display:block;width:100%;margin:8px 0 12px">
+<div class="row">
+<button class="btn primary" id="bulkExtractBtn" type="button">সব ফাইল থেকে Title বের করুন</button>
+<button class="btn" id="bulkClearBtn" type="button">নতুন করে শুরু করুন</button>
+</div>
+<div id="bulkStatus" class="status" role="status">যতগুলো HTML ফাইল চান নির্বাচন করুন, তারপর “সব ফাইল থেকে Title বের করুন” চাপুন। একাধিক ব্যাচ থেকেও টাইটেল যোগ করতে পারবেন।</div>
+<p class="muted">প্রতিটি HTML ফাইলের &lt;title&gt; ট্যাগ থেকে টাইটেল সংগ্রহ হবে। একই টাইটেল একবারই দেখানো হবে।</p>
+</section>
+
+<section class="panel">
+<div class="top"><h2 style="margin:0">4. Extracted titles</h2><span id="count" class="pill">0 titles</span></div>
+<div class="row" style="margin-top:12px"><button class="btn primary" id="copyBtn" disabled>Copy all titles</button><button class="btn" id="downloadTitlesBtn" disabled>Download titles .txt</button></div>
+<div id="titlesList" style="margin-top:10px"><p class="muted">এখনও কোনো টাইটেল পাওয়া যায়নি।</p></div>
+</section>
+<footer>GitHub Pages compatible · Dark mode default · No external proxy used</footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let titles=[], resolvedUrl="";
+let jsDownloadUrl="", jsLinkReady=false, modifiedHtml="";
+function setStatus(msg,kind=""){ $("status").className="status "+kind; $("status").textContent=msg; }
+function safeB64Decode(s){
+ try{const clean=String(s).replace(/ /g,"+").replace(/-/g,"+").replace(/_/g,"/").replace(/[^A-Za-z0-9+/=_-]/g,"");const raw=atob(clean);return new TextDecoder().decode(Uint8Array.from(raw,c=>c.charCodeAt(0)));}
+ catch(e){try{return atob(String(s).replace(/ /g,"+"));}catch(_){return String(s);}}
+}
+function decodeRepeated(value){let out=String(value||"");for(let i=0;i<4;i++){let next=out;try{next=decodeURIComponent(out.replace(/\+/g,"%2B"));}catch(e){}if(next===out)break;out=next;}return out;}
+function decodeXmlParam(value){
+ if(!value)return "";let v=String(value);
+ if(/^data:/i.test(v)){const comma=v.indexOf(',');if(comma>=0){const meta=v.slice(0,comma),body=v.slice(comma+1);if(/;base64/i.test(meta))return safeB64Decode(body);return decodeRepeated(body);}}
+ v=decodeRepeated(v);
+ if(/<krpano|include|openurl/i.test(v))return v;
+ const b=safeB64Decode(String(value));if(/<krpano|openurl|include/i.test(b))return b;
+ return v;
+}
+function decodeNestedAtob(s){let out=s,rx=/atob\s*\(\s*['"]([^'"]+)['"]\s*\)/gi,m;while((m=rx.exec(s))){const d=safeB64Decode(m[1]);if(d!==m[1])out+="\n"+d;}return out;}
+function extractTargetUrl(confText,id,includeUrl){
+ const full=decodeNestedAtob(confText||"");let m;
+ m=full.match(/https?:\/\/[^\s"'`+]+?\/(?=["']\s*\+\s*(?:id|slug))/i);if(m&&id)return m[0]+encodeURIComponent(id)+(/slug/i.test(m[0])?"":"")+".html";
+ m=full.match(/base\s*=\s*["'](https?:\/\/[^"']+)["']/i);if(m&&id)return m[1].replace(/\/$/,"")+"/"+encodeURIComponent(id)+".html";
+ m=full.match(/fetch\s*\(\s*["'](https?:\/\/[^"']+)["']\s*\+\s*(?:id|slug)\s*\+\s*["'](\.[a-z0-9]+)?["']/i);if(m&&id)return m[1]+encodeURIComponent(id)+(m[2]||".html");
+ m=full.match(/https?:\/\/[^\s"'`<>]+\.(?:html|php)(?:\?[^\s"'`<>]*)?/i);if(m)return m[0].replace(/[),;]+$/,"");
+ try{const u=new URL(includeUrl);const parts=u.pathname.split("/").filter(Boolean);parts.pop();if(id)return u.origin+"/"+(parts.length?parts.join("/")+"/":"")+encodeURIComponent(id)+".html";}catch(e){}
+ return "";
+}
+function normalizeInclude(candidate,baseUrl){
+ let c=String(candidate||"").trim().replace(/\\\//g,"/").replace(/\\/g,"");
+ if(!c)return "";
+ if(/^https?:\/\//i.test(c))return c;
+ c=c.replace(/^\/+/,"");
+ // Legacy krpano configs sometimes encode a hostname as /\example.com/path
+ if(/^[a-z0-9.-]+\.[a-z]{2,}(?:\/|$)/i.test(c))return "https://"+c;
+ try{return new URL(candidate.replace(/\\/g,""),baseUrl).href;}catch(e){try{return new URL(c,baseUrl).href;}catch(_){return "";}}
+}
+function resolveFromInput(raw){
+ let u;try{u=new URL(raw.trim());}catch(e){return {error:"সঠিক পূর্ণ URL দিন (https:// দিয়ে শুরু করুন)।"};}
+ const p=u.searchParams;const xmlParam=p.get("xml")||"";const cfgParam=p.get("config")||"";const id=p.get("id")||p.get("contentId")||p.searchParams?.get?.("slug")||"";
+ const payload=xmlParam?decodeXmlParam(xmlParam):"";const config=cfgParam?decodeRepeated(cfgParam):"";const decoded=payload||"";
+ let direct=decoded.match(/openurl\s*\(\s*['"]?(https?:\/\/[^'"\s)]+)/i)||decoded.match(/(https?:\/\/[^\s"'<>]+\.(?:html|php)(?:\?[^\s"'<>]*)?)/i);
+ if(direct)return {url:direct[1].replace(/[)',;]+$/, ""),decoded,id,kind:"xml"};
+ const inc=decoded.match(/(?:url|src)\s*=\s*["']([^"']+)["']/i);
+ if(inc){const include=normalizeInclude(inc[1],u.href);const derived=extractTargetUrl("",id,include);return {url:derived||include,include,decoded,id,kind:"xml"};}
+ if(config){
+   let cfg=config;try{cfg=decodeRepeated(cfg);}catch(e){}
+   if(!/^https?:\/\//i.test(cfg)){const clean=cfg.replace(/^\/+/,"");cfg=/^[a-z0-9.-]+\.[a-z]{2,}\//i.test(clean)?"https://"+clean:new URL(cfg,u.href).href;}
+   const configId=id||(()=>{try{return new URL(cfg).pathname.split("/").pop().replace(/\.(json|xml)$/i,"");}catch(e){return "";}})();
+   // If the config URL itself names a downloadable HTML file, use it directly.
+   if(/\.(html?|php)(?:$|\?)/i.test(cfg))return {url:cfg,decoded:cfg,id:configId,kind:"config"};
+   return {url:"",configUrl:cfg,decoded:"",id:configId,kind:"config"};
+ }
+ if(decoded&&/<krpano|openurl|include/i.test(decoded))return {decoded,id,kind:"xml"};
+ if(/\.(html?|php)(?:$|\?)/i.test(u.href)||/script\.google\.com/i.test(u.hostname))return {url:u.href,decoded:"",id:id||"downloaded",kind:"direct"};
+ return {url:"",decoded:"",id,kind:"page",pageUrl:u.href};
+}
+function parseTitles(source){
+ const doc=new DOMParser().parseFromString(source,"text/html");
+ const candidates=[];
+ const add=v=>{v=(v||"").replace(/\s+/g," ").trim();if(v && !candidates.includes(v))candidates.push(v);};
+ // Only extract the page title from the <title> tag.
+ for(const el of doc.querySelectorAll("title"))add(el.textContent);
+ return candidates;
+}
+function renderTitles(){
+ $("count").textContent=titles.length+" title"+(titles.length===1?"":"s");
+ $("titlesList").replaceChildren();
+ if(!titles.length){$("titlesList").innerHTML='<p class="muted">কোনো টাইটেল পাওয়া যায়নি। HTML পেস্ট করে Extract Titles চাপুন।</p>';}
+ titles.forEach((t,i)=>{const row=document.createElement("div");row.className="result";const name=document.createElement("div");name.className="titletext";name.textContent=t;const btn=document.createElement("button");btn.className="btn";btn.textContent="Copy";btn.onclick=()=>navigator.clipboard.writeText(t).then(()=>setStatus("টাইটেল কপি হয়েছে।","good")).catch(()=>setStatus("কপি করতে পারেনি; টেক্সট সিলেক্ট করে কপি করুন।","warn"));row.append(name,btn);$("titlesList").append(row);});
+ $("copyBtn").disabled=!titles.length;$("downloadTitlesBtn").disabled=!titles.length;
+}
+function downloadBlob(content,name,type){
+  try {
+    const blob=new Blob([content],{type});
+    const objectUrl=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=objectUrl;
+    a.download=name;
+    a.style.display="none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Keep the object URL alive longer for browsers that start downloads asynchronously.
+    setTimeout(()=>URL.revokeObjectURL(objectUrl),60000);
+    return true;
+  } catch (err) {
+    // Fallback for browsers where Blob URL downloads are blocked.
+    try {
+      const dataUrl="data:"+type+";charset=utf-8,"+encodeURIComponent(content);
+      const a=document.createElement("a");
+      a.href=dataUrl;
+      a.download=name;
+      a.style.display="none";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return true;
+    } catch (fallbackErr) { return false; }
+  }
+}
+// Keep the calendar hidden unless YES is selected; default is always NO.
+(()=>{
+  const option=$("dateChangeOption"), box=$("calendarBox"), input=$("targetDate");
+  if(option) option.value="no";
+  if(input&&!input.value){const d=new Date();input.value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
+  const sync=()=>{if(box) box.classList.toggle("hidden", option?.value!=="yes");};
+  option?.addEventListener("change",sync); sync();
+})();
+function updateHtmlDates(source){
+  if($("dateChangeOption")?.value!=="yes") return source;
+  const selectedDate=$("targetDate")?.value;
+  if(!selectedDate) { setStatus("YES নির্বাচন করেছেন—ক্যালেন্ডার থেকে একটি তারিখ বেছে নিন।","warn"); return source; }
+  const parts=selectedDate.split("-");
+  const yyyy=parts[0], mm=parts[1], dd=parts[2];
+  // Protect the complete title tag so the title stays exactly as it was.
+  const savedTitles=[];
+  let html=String(source).replace(/<title\b[^>]*>[\s\S]*?<\/title\s*>/gi,m=>{savedTitles.push(m);return `__TITLE_PROTECTED_${savedTitles.length-1}__`;});
+  // ISO-like date: YYYY-MM-DD or YYYY/MM/DD.
+  html=html.replace(/\b(19\d{2}|20\d{2}|21\d{2})([-/.])(0?[1-9]|1[0-2])\2(0?[1-9]|[12]\d|3[01])\b/g,(_m,_y,sep)=>`${yyyy}${sep}${mm}${sep}${dd}`);
+  // D/M/YYYY or M/D/YYYY; keep the original separator and general ordering.
+  html=html.replace(/\b(0?[1-9]|[12]\d|3[01])([/.\-])(0?[1-9]|1[0-2])\2(19\d{2}|20\d{2}|21\d{2})\b/g,(m,a,sep,b)=>{
+    const first=Number(a), second=Number(b);
+    let outA=dd, outB=mm;
+    if(first<=12 && second>12){outA=mm;outB=dd;}
+    const paddedA=String(outA).padStart(a.length>1?2:1,"0");
+    const paddedB=String(outB).padStart(b.length>1?2:1,"0");
+    return `${paddedA}${sep}${paddedB}${sep}${yyyy}`;
+  });
+  html=html.replace(/__TITLE_PROTECTED_(\d+)__/g,(_m,i)=>savedTitles[Number(i)]||"");
+  return html;
+}
+async function fetchAndLoad(url, filenameHint="downloaded.html"){
+ const response=await fetch(url,{redirect:"follow"});if(!response.ok)throw new Error("HTTP "+response.status);
+ const text=await response.text();if(!text.trim())throw new Error("সার্ভার খালি ফাইল দিয়েছে");
+ $("htmlInput").value=text;syncTitleEditorFromHtml();titles=parseTitles(text);renderTitles();
+ resolvedUrl=response.url||url;
+ return {text,count:titles.length,filename:filenameHint};
+}
+function suggestedFilename(url,id){let name=(id||"").trim();if(!name){try{name=new URL(url).pathname.split("/").pop().replace(/\.[^.]+$/,"");}catch(e){}}name=(name||"downloaded").replace(/[^\w.-]+/g,"_").slice(0,90);return (name||"downloaded")+".html";}
+function applyTitleOverride(source, titleValue){
+  const title=cleanDuplicateTitleText(titleValue);
+  if(!title) return String(source||"");
+  let html=String(source||"");
+  const escaped=title.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const titleMatch=html.match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i);
+  if(titleMatch){
+    const oldRaw=titleMatch[1].trim();
+    const decodeEntities=value=>String(value||"")
+      .replace(/&amp;/gi,"&").replace(/&lt;/gi,"<").replace(/&gt;/gi,">")
+      .replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'");
+    const oldText=decodeEntities(oldRaw.replace(/<[^>]*>/g,"")).trim();
+    const variants=[oldRaw,oldText,
+      oldText.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")];
+    // Replace exact old-title text wherever it appears in the HTML (meta tags,
+    // headings, JSON-LD, scripts, etc.), not only inside the <title> element.
+    for(const oldValue of [...new Set(variants)].filter(Boolean)){
+      html=html.split(oldValue).join(escaped);
+    }
+    // Always update the actual title tag, including when its body has extra whitespace.
+    html=html.replace(/(<title\b[^>]*>)[\s\S]*?(<\/title\s*>)/i,(_m,open,close)=>open+escaped+close);
+  } else if(/<head\b[^>]*>/i.test(html)){
+    html=html.replace(/<head\b[^>]*>/i,m=>m+"\n<title>"+escaped+"</title>");
+  } else {
+    html="<title>"+escaped+"</title>\n"+html;
+  }
+  return html;
+}
+function cleanDuplicateTitleText(value){
+  let text=String(value||"").trim();
+  // If the same complete title was accidentally copied twice with spaces between,
+  // keep only one copy (for example: "My Title My Title").
+  const words=text.split(/\s+/);
+  if(words.length>=2 && words.length%2===0){
+    const half=words.length/2;
+    if(words.slice(0,half).join(" ")===words.slice(half).join(" ")) text=words.slice(0,half).join(" ");
+  }
+  return text;
+}
+function syncTitleEditorFromHtml(){
+  const input=$("titleOverrideInput");
+  if(!input) return;
+  const match=String($("htmlInput").value||"").match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i);
+  const status=$("titleEditStatus");
+  if(match){
+    const decoded=match[1].replace(/<[^>]*>/g,"").replace(/&amp;/gi,"&").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'");
+    input.value=cleanDuplicateTitleText(decoded);
+    if(status) status.textContent="বর্তমান HTML title একবার দেখানো হয়েছে। পরিবর্তন করে Title আপডেট করুন চাপুন।";
+  } else {
+    input.value="";
+    if(status) status.textContent="এই HTML-এ title ট্যাগ নেই; নতুন title লিখে আপডেট করুন।";
+  }
+}
+function titleBasedFilename(source, usernameValue=""){
+  let base=(usernameValue||"").trim();
+  if(!base){
+    const match=String(source||"").match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i);
+    base=match ? match[1].replace(/<[^>]*>/g," ").replace(/&amp;/gi,"&").replace(/&nbsp;/gi," ").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").trim() : "html";
+  }
+  base=base.toLowerCase().replace(/[<>:"/\\|?*\x00-\x1F]+/g,"-").replace(/\s+/g,"-").replace(/[^a-z0-9._-]+/g,"-").replace(/-+/g,"-").replace(/^[-_.]+|[-_.]+$/g,"").slice(0,100);
+  // Add a fresh 5-character lowercase alphanumeric suffix to avoid filename collisions.
+  const chars="abcdefghijklmnopqrstuvwxyz0123456789";
+  let suffix="";
+  if (window.crypto && window.crypto.getRandomValues) {
+    const bytes=new Uint8Array(5);
+    window.crypto.getRandomValues(bytes);
+    for (const byte of bytes) suffix += chars[byte % chars.length];
+  } else {
+    for (let i=0;i<5;i++) suffix += chars[Math.floor(Math.random()*chars.length)];
+  }
+  return (base||"html")+"-"+suffix+".html";
+}
+$("processBtn").onclick=async()=>{
+ const raw=$("urlInput").value.trim();if(!raw){setStatus("প্রথমে URL পেস্ট করুন।","warn");return;}
+ $("processBtn").disabled=true;resolvedUrl="";$("resolvedBox").classList.add("hidden");$("downloadResolvedBtn").disabled=true;
+ try{
+  const result=resolveFromInput(raw);if(result.error){setStatus(result.error,"bad");return;}
+  if(result.decoded&&/<krpano|openurl|include/i.test(result.decoded)){$("htmlInput").value=result.decoded;}
+  let target=result.url;
+  // Match the working extension: fetch the include config, then inspect its target patterns.
+  if(result.include){
+    try{const includeResponse=await fetch(result.include);if(includeResponse.ok){const includeText=await includeResponse.text();const fromInclude=extractTargetUrl(includeText,result.id,result.include);if(fromInclude)target=fromInclude;}}catch(e){}
+  }
+  if(!target&&result.configUrl){
+    setStatus("Config URL পাওয়া গেছে। Config পড়ার চেষ্টা করছি…", "good");
+    try{
+      const configResponse=await fetch(result.configUrl);if(!configResponse.ok)throw new Error("HTTP "+configResponse.status);
+      const confText=await configResponse.text();
+      let final=extractTargetUrl(confText,result.id,result.configUrl);
+      if(!final){const hostMatch=confText.match(/fetch\s*\(\s*['"](https?:\/\/[^'"]+)['"]\s*\+\s*window\.location\.hostname\s*\+\s*['"]([^'"]*)['"]/i);if(hostMatch){try{final=hostMatch[1]+new URL(raw).hostname+hostMatch[2];}catch(e){}}}
+      if(final)target=final;else throw new Error("config-এ target HTML URL পাওয়া যায়নি");
+    }catch(e){setStatus("Config URL resolve করা যায়নি। এই সাইট CORS দিয়ে বাধা দিতে পারে। Config/HTML ফাইল ডাউনলোড করে নিচে আপলোড করুন।", "warn");return;}
+  }
+  if(!target&&result.include){target=extractTargetUrl("",result.id,result.include)||result.include;}
+  if(target){
+    resolvedUrl=target;$("resolvedLink").href=target;$("resolvedLink").textContent=target;$("resolvedBox").classList.remove("hidden");$("downloadResolvedBtn").disabled=false;
+    setStatus("Target URL পাওয়া গেছে। HTML পড়ছি…", "good");
+    try{const loaded=await fetchAndLoad(target,suggestedFilename(target,result.id));setStatus("HTML লোড হয়েছে; "+loaded.count+"টি টাইটেল পাওয়া গেছে। Download HTML চাপলে ফাইল পাবেন।","good");}
+    catch(e){setStatus("Target URL পাওয়া গেছে, কিন্তু ব্রাউজার HTML পড়তে পারেনি (সাধারণত CORS/login restriction)। Resolved link খুলুন; পেজে HTML পাওয়া গেলে Save As করুন, অথবা Extension দিয়ে HTML ডাউনলোড করে এখানে আপলোড করুন।","warn");}
+    return;
+  }
+  // If XML/config decoding produced content, keep it available for manual inspection.
+  if(result.decoded){setStatus("XML decode হয়েছে, কিন্তু target HTML URL বের করা যায়নি। নিচের HTML বক্সে decoded content আছে।","warn");return;}
+  const pageUrl=result.pageUrl||raw;
+  try{const loaded=await fetchAndLoad(pageUrl,suggestedFilename(pageUrl,result.id));setStatus("URL থেকে HTML লোড হয়েছে; "+loaded.count+"টি টাইটেল পাওয়া গেছে।","good");}
+  catch(e){setStatus("এই URL সরাসরি পড়া যাচ্ছে না (CORS/login restriction হতে পারে)। পুরোনো Extension দিয়ে HTML ডাউনলোড করে এখানে ফাইল আপলোড করুন।","warn");}
+ }catch(e){setStatus("প্রসেস করা যায়নি: "+e.message,"bad");}finally{$("processBtn").disabled=false;}
+};
+$("downloadResolvedBtn").onclick=async()=>{
+ if(!resolvedUrl)return;
+ const btn=$("downloadResolvedBtn");btn.disabled=true;
+ try{const r=await fetch(resolvedUrl);if(!r.ok)throw new Error("HTTP "+r.status);const blob=await r.blob();const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=suggestedFilename(resolvedUrl,"");document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500);setStatus("HTML ডাউনলোড শুরু হয়েছে।","good");}
+ catch(e){window.open(resolvedUrl,"_blank","noopener,noreferrer");setStatus("সাইট সরাসরি ডাউনলোড ব্লক করেছে বা CORS বাধা দিয়েছে। নতুন ট্যাবে খুলেছি; সেখান থেকে Save page as ব্যবহার করুন।","warn");}
+ finally{btn.disabled=false;}
+};
+$("extractBtn").onclick=()=>{titles=parseTitles($("htmlInput").value);renderTitles();setStatus(titles.length+"টি unique title পাওয়া গেছে।",titles.length?"good":"warn");};
+
+// Bulk HTML title extraction: supports many selected files and repeated batches.
+$("bulkExtractBtn").onclick=async()=>{
+  const input=$("bulkHtmlFiles"), status=$("bulkStatus"), files=Array.from(input.files||[]);
+  if(!files.length){status.className="status warn";status.textContent="আগে এক বা একাধিক HTML ফাইল নির্বাচন করুন।";return;}
+  const btn=$("bulkExtractBtn"); btn.disabled=true;
+  let added=0, failed=0;
+  try{
+    for(const file of files){
+      try{
+        const source=await file.text();
+        for(const title of parseTitles(source)){
+          if(!titles.includes(title)){titles.push(title);added++;}
+        }
+      }catch(err){failed++;}
+    }
+    renderTitles();
+    status.className="status "+(added?"good":"warn");
+    status.textContent=`${files.length}টি ফাইল প্রসেস হয়েছে। নতুন ${added}টি টাইটেল যোগ হয়েছে। মোট unique title: ${titles.length}.`+(failed?` ${failed}টি ফাইল পড়া যায়নি।`:"");
+    input.value="";
+  }catch(err){status.className="status bad";status.textContent="ফাইলগুলো প্রসেস করা যায়নি। আবার চেষ্টা করুন।";}
+  finally{btn.disabled=false;}
+};
+$("bulkClearBtn").onclick=()=>{
+  titles=[]; renderTitles(); $("bulkHtmlFiles").value="";
+  const status=$("bulkStatus"); status.className="status"; status.textContent="তালিকা খালি করা হয়েছে। HTML ফাইল নির্বাচন করে আবার Title বের করুন।";
+};
+$("downloadHtmlBtn").onclick=()=>{const s=$("htmlInput").value;if(!s.trim()){setStatus("ডাউনলোড করার মতো HTML নেই।","warn");return;}const titled=applyTitleOverride(s,$("titleOverrideInput")?.value||"");const output=updateHtmlDates(titled);const filename=titleBasedFilename(titled,$("usernameInput")?.value||"");downloadBlob(output,filename,"text/html;charset=utf-8");setStatus("HTML ডাউনলোড শুরু হয়েছে: "+filename,"good");};
+$("copyBtn").onclick=()=>{navigator.clipboard.writeText(titles.join("\n")).then(()=>setStatus(titles.length+"টি টাইটেল কপি হয়েছে (নাম্বার ছাড়া)।","good")).catch(()=>{const t=document.createElement("textarea");t.value=titles.join("\n");document.body.append(t);t.select();document.execCommand("copy");t.remove();setStatus("টাইটেল কপি হয়েছে (নাম্বার ছাড়া)।","good");});};
+$("downloadTitlesBtn").onclick=()=>downloadBlob(titles.join("\n"),"titles.txt","text/plain;charset=utf-8");
+$("fileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f)return;$("htmlInput").value=await f.text();syncTitleEditorFromHtml();setStatus("ফাইল লোড হয়েছে: "+f.name,"good");};
+$("clearBtn").onclick=()=>{$("urlInput").value="";$("htmlInput").value="";$("titleOverrideInput").value="";$("fileInput").value="";titles=[];resolvedUrl="";$("resolvedBox").classList.add("hidden");$("downloadResolvedBtn").disabled=true;renderTitles();setStatus("ফর্ম পরিষ্কার করা হয়েছে।");};
+
+
+$("jsHtmlFileInput").addEventListener("change",async e=>{
+  const f=e.target.files?.[0]; if(!f)return;
+  try { $("htmlInput").value=await f.text(); syncTitleEditorFromHtml(); jsLinkReady=false; modifiedHtml=""; $("downloadJsBtn").disabled=true;
+    const st=$("jsLinkStatus"); st.className="status good"; st.textContent="HTML ফাইল লোড হয়েছে: "+f.name;
+  } catch(err) { const st=$("jsLinkStatus"); st.className="status bad"; st.textContent="HTML ফাইল পড়া যায়নি। অন্য ফাইল নির্বাচন করুন।"; }
+});
+$("htmlInput").addEventListener("input",()=>{
+  syncTitleEditorFromHtml();
+  jsLinkReady=false; modifiedHtml=""; $("downloadJsBtn").disabled=true;
+});
+$("titleOverrideInput").addEventListener("input",()=>{
+  jsLinkReady=false; modifiedHtml=""; $("downloadJsBtn").disabled=true;
+});
+$("usernameInput").addEventListener("input",()=>{
+  jsLinkReady=false; modifiedHtml=""; $("downloadJsBtn").disabled=true;
+});
+$("jsUrlInput").addEventListener("input",()=>{
+  jsLinkReady=false; modifiedHtml=""; $("downloadJsBtn").disabled=true;
+});
+$("applyTitleBtn").onclick=()=>{
+  const source=$("htmlInput").value;
+  const title=cleanDuplicateTitleText($("titleOverrideInput").value);
+  const status=$("titleEditStatus");
+  if(!source.trim()){
+    if(status) status.textContent="আগে HTML পেস্ট করুন অথবা HTML ফাইল আপলোড করুন।";
+    setStatus("আগে HTML পেস্ট করুন অথবা HTML ফাইল আপলোড করুন।","warn");
+    return;
+  }
+  if(!title){
+    if(status) status.textContent="Title বক্সে নতুন title লিখুন।";
+    setStatus("Title বক্সে নতুন title লিখুন।","warn");
+    return;
+  }
+  $("htmlInput").value=applyTitleOverride(source,title);
+  const current=String($("htmlInput").value||"").match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i);
+  if(status) status.textContent=current ? "Title HTML source-এ আপডেট হয়েছে। এখন লিংক আপডেট করুন বা Download HTML চাপুন।" : "Title যোগ করা হয়েছে।";
+  jsLinkReady=false; modifiedHtml=""; $("downloadJsBtn").disabled=true;
+  setStatus("HTML source-এর title আপডেট হয়েছে। এখন ‘লিংক আপডেট করুন’ চাপুন অথবা Download HTML করুন।","good");
+};
+
+$("updateJsLinkBtn").onclick=async()=>{
+  const status=$("jsLinkStatus");
+  const show=(msg,kind="")=>{status.className="status "+kind;status.textContent=msg;};
+  const btn=$("updateJsLinkBtn");
+  $("downloadJsBtn").disabled=true;jsLinkReady=false;modifiedHtml="";
+  let html=$("htmlInput").value.trim();
+  const usernameValue=$("usernameInput").value.trim();
+  btn.disabled=true;
+  try{
+    if(!html) {show("HTML ফাইল নির্বাচন করুন অথবা উপরের HTML source বক্সে HTML কোড দিন।","warn");return;}
+    const filename=titleBasedFilename(html,usernameValue);
+    const jsSrc=$("jsUrlInput").value.trim() || "https://portalbsc.github.io/let/sp.js";
+    let parsedJsUrl;
+    try { parsedJsUrl=new URL(jsSrc); if(!["http:","https:"].includes(parsedJsUrl.protocol)) throw new Error(); }
+    catch(e) { show("সঠিক http/https JS URL দিন।","warn"); return; }
+    const tag='<script src="'+parsedJsUrl.href.replace(/&/g,"&amp;").replace(/"/g,"&quot;")+'"><\/script>';
+    const existing=/<script\b(?=[^>]*\bsrc\s*=\s*["'][^"']*(?:getvalid\.pro\/watch\/|portalbsc\.github\.io\/let\/sp\.js|km\.js|m1\.js|sp\.js)[^"']*["'])[^>]*>\s*<\/script>/i;
+    if(existing.test(html))html=html.replace(existing,tag);
+    else if(!html.includes(jsSrc)){
+      if(/<\/body\s*>/i.test(html))html=html.replace(/<\/body\s*>/i,tag+"\n</body>");
+      else if(/<\/html\s*>/i.test(html))html=html.replace(/<\/html\s*>/i,tag+"\n</html>");
+      else html+="\n"+tag+"\n";
+    }
+    html=updateHtmlDates(html);
+    modifiedHtml=html;
+    $("downloadJsBtn").dataset.filename=filename;
+    jsLinkReady=true;$("downloadJsBtn").disabled=false;
+    show("JS লিংক আপডেট হয়েছে। Title অপরিবর্তিত থাকবে; ডাউনলোড ফাইলের নাম ছোট হাতের হবে: "+filename,"good");
+  }catch(e){
+    show("HTML তৈরি করা যায়নি। অনলাইন URL হলে CORS বাধা থাকতে পারে। কোডটি উপরের HTML source বক্সে পেস্ট করুন।","bad");
+  }finally{btn.disabled=false;}
+};
+$("downloadJsBtn").onclick=()=>{
+  const status=$("jsLinkStatus");
+  const show=(msg,kind="")=>{status.className="status "+kind;status.textContent=msg;};
+  if(!jsLinkReady||!modifiedHtml){show("আগে HTML কোড দিন এবং লিংক তৈরি করুন।","warn");return;}
+  const filename=$("downloadJsBtn").dataset.filename||"html_download.html";
+  const ok=downloadBlob(modifiedHtml,filename,"text/html;charset=utf-8");
+  show(ok?"ডাউনলোড শুরু হয়েছে: "+filename:"ডাউনলোড শুরু করা যায়নি।",ok?"good":"bad");
+};
+
+$("themeBtn").onclick=()=>{const html=document.documentElement;const light=html.dataset.theme!=="light";html.dataset.theme=light?"light":"dark";$("themeBtn").textContent=light?"🌙 Dark mode":"☀️ Light mode";document.querySelector('meta[name="theme-color"]').content=light?"#f4f6fb":"#0b1020";};
+</script></body></html>
