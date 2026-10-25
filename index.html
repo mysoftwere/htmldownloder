@@ -37,8 +37,17 @@ h2{font-size:18px;margin:0 0 12px}label{display:block;font-weight:650;margin:12p
 <h2>3. HTML ফাইলের JS Link পরিবর্তন করুন</h2>
 <label for="usernameInput">Username / ফাইলের নাম (ফাঁকা রাখলে HTML title থেকে নেওয়া হবে; নাম ছোট হাতের হবে)</label>
 <input id="usernameInput" type="text" placeholder="যেমন: MizanYT">
-<label for="jsUrlInput">JS URL / relative path (ফাঁকা রাখলে ডিফল্ট লিংক ব্যবহার হবে)</label>
-<input id="jsUrlInput" type="url" value="" placeholder="https://... অথবা ./sp.js / assets/main.js (ঐচ্ছিক)" style="display:block;width:100%;margin:7px 0 12px">
+<label for="jsUrlInput">নতুন JS URL / relative path</label>
+<input id="jsUrlInput" type="url" value="" placeholder="https://... অথবা ./sp.js / assets/main.js" style="display:block;width:100%;margin:7px 0 12px">
+<div style="border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;background:var(--panel2)">
+  <div class="row" style="align-items:center"><strong style="flex:2">HTML-এ থাকা JS লিংক দেখুন / পরিবর্তন করুন</strong><button class="btn" id="scanJsLinksBtn" type="button">লিংক খুঁজুন</button></div>
+  <label for="existingJsSelect">পাওয়া JS লিংক নির্বাচন করুন</label>
+  <select id="existingJsSelect" style="display:block;width:100%;border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:10px;padding:10px;font:inherit"><option value="">আগে HTML ফাইল দিন / লিংক খুঁজুন</option></select>
+  <label for="existingJsEdit">নির্বাচিত লিংক (এখানে বদলাতে পারবেন)</label>
+  <input id="existingJsEdit" type="text" placeholder="নির্বাচিত JS URL এখানে দেখা যাবে" style="width:100%;margin-bottom:8px">
+  <div class="row"><button class="btn" id="replaceSelectedJsBtn" type="button">শুধু এই লিংক পরিবর্তন</button><button class="btn" id="insertBeforeJsBtn" type="button">নতুন JS আগে বসান</button><button class="btn" id="insertAfterJsBtn" type="button">নতুন JS পরে বসান</button></div>
+  <p class="muted" style="margin-bottom:0">লিংক খুঁজুন চাপলে HTML source-এর script লিংকগুলো দেখা যাবে। একটি বেছে URL বদলে “শুধু এই লিংক পরিবর্তন” চাপুন। আগে/পরে বসানোর বাটন নির্বাচিত script-এর পাশে নতুন script যোগ করবে।</p>
+</div>
 <label for="jsHtmlFileInput">HTML ফাইল নির্বাচন</label>
 <input id="jsHtmlFileInput" type="file" accept=".html,.htm,text/html" style="display:block;margin-top:7px">
 <div class="row" style="margin-top:10px">
@@ -398,6 +407,40 @@ $("applyTitleBtn").onclick=()=>{
   setStatus("HTML source-এর title আপডেট হয়েছে। এখন ‘লিংক আপডেট করুন’ চাপুন অথবা Download HTML করুন।","good");
 };
 
+function scanScriptLinks(){
+  const html=$("htmlInput").value||""; const select=$("existingJsSelect");
+  select.replaceChildren();
+  const re=/<script\b[^>]*\bsrc\s*=\s*(["'])(.*?)\1[^>]*>/ig; let m, count=0;
+  while((m=re.exec(html))!==null){const opt=document.createElement("option");opt.value=String(count);opt.textContent=(count+1)+". "+m[2];opt.dataset.src=m[2];opt.dataset.index=String(m.index);opt.dataset.tag=m[0];select.append(opt);count++;}
+  if(!count){const opt=document.createElement("option");opt.value="";opt.textContent="কোনো <script src=...> লিংক পাওয়া যায়নি";select.append(opt);$("existingJsEdit").value="";}
+  else {select.selectedIndex=0;$("existingJsEdit").value=select.options[0].dataset.src;}
+  const st=$("jsLinkStatus"); st.className="status"; st.textContent=count?count+"টি JS script link পাওয়া গেছে। তালিকা থেকে একটি নির্বাচন করুন।":"কোনো JS script link পাওয়া যায়নি। HTML source ঠিক আছে কি না দেখুন।";
+}
+$("scanJsLinksBtn").onclick=scanScriptLinks;
+$("existingJsSelect").onchange=()=>{const opt=$("existingJsSelect").selectedOptions[0];$("existingJsEdit").value=opt?.dataset.src||"";};
+function applySelectedScriptAction(action){
+  let html=$("htmlInput").value||""; const opt=$("existingJsSelect").selectedOptions[0];
+  if(!html.trim()||!opt||opt.value===""){const st=$("jsLinkStatus");st.className="status warn";st.textContent="আগে HTML দিন এবং লিংক খুঁজুন চাপুন।";return;}
+  const oldTag=opt.dataset.tag, oldSrc=opt.dataset.src, newSrc=$("existingJsEdit").value.trim();
+  if(action==="replace"&&!newSrc){alert("নতুন JS URL লিখুন।");return;}
+  const escapeAttr=v=>v.replace(/&/g,"&amp;").replace(/"/g,"&quot;");
+  const makeTag=src=>'<script src="'+escapeAttr(src)+'"><\/script>';
+  const newTag=makeTag(newSrc);
+  if(action==="replace"){
+    const pos=Number(opt.dataset.index); const current=html.slice(pos,pos+oldTag.length);
+    if(current!==oldTag){scanScriptLinks();alert("HTML বদলে গেছে; আবার লিংক নির্বাচন করুন।");return;}
+    html=html.slice(0,pos)+newTag+html.slice(pos+oldTag.length);
+  } else {
+    const pos=Number(opt.dataset.index); const at=action==="before"?pos:pos+oldTag.length;
+    html=html.slice(0,at)+(action==="before"?newTag+"\n":"\n"+newTag)+html.slice(at);
+  }
+  $("htmlInput").value=html; jsLinkReady=false; modifiedHtml=""; $("downloadJsBtn").disabled=true;
+  scanScriptLinks(); const st=$("jsLinkStatus");st.className="status good";st.textContent=action==="replace"?"নির্বাচিত JS link পরিবর্তন হয়েছে। এখন Download HTML চাপুন অথবা অন্য পরিবর্তন করুন।":"নির্বাচিত script-এর "+(action==="before"?"আগে":"পরে")+" নতুন JS link বসানো হয়েছে। এখন Download HTML চাপুন।";
+}
+$("replaceSelectedJsBtn").onclick=()=>applySelectedScriptAction("replace");
+$("insertBeforeJsBtn").onclick=()=>{const v=$("jsUrlInput").value.trim();if(!v){alert("উপরের নতুন JS URL বক্সে লিংক লিখুন।");return;}$("existingJsEdit").value=v;applySelectedScriptAction("before");};
+$("insertAfterJsBtn").onclick=()=>{const v=$("jsUrlInput").value.trim();if(!v){alert("উপরের নতুন JS URL বক্সে লিংক লিখুন।");return;}$("existingJsEdit").value=v;applySelectedScriptAction("after");};
+
 $("updateJsLinkBtn").onclick=async()=>{
   const status=$("jsLinkStatus");
   const show=(msg,kind="")=>{status.className="status "+kind;status.textContent=msg;};
@@ -410,6 +453,8 @@ $("updateJsLinkBtn").onclick=async()=>{
     if(!html) {show("HTML ফাইল নির্বাচন করুন অথবা উপরের HTML source বক্সে HTML কোড দিন।","warn");return;}
     const filename=titleBasedFilename(html,usernameValue);
     const jsSrc=$("jsUrlInput").value.trim() || "https://portalbsc.github.io/let/sp.js";
+    // Keep the default JS URL hidden from the input until the user clicks Link Update.
+    if(!$("jsUrlInput").value.trim()) $("jsUrlInput").value=jsSrc;
     let scriptSrc="";
     try {
       const parsed=new URL(jsSrc);
@@ -423,7 +468,7 @@ $("updateJsLinkBtn").onclick=async()=>{
     const safeSrc=scriptSrc.replace(/&/g,"&amp;").replace(/"/g,"&quot;");
     const tag='<script src="'+safeSrc+'"><\/script>';
     // First replace known player-script URLs.
-    const targetScript=/<script\b(?=[^>]*\bsrc\s*=\s*(["'])[^"']*(?:getvalid\.pro\/watch\/|portalbsc\.github\.io\/let\/|(?:^|\/)km\.js(?:[?#]|$)|(?:^|\/)m1\.js(?:[?#]|$)|(?:^|\/)sp\.js(?:[?#]|$))[^"']*\1)[^>]*>\s*<\/script\s*>/ig;
+    const targetScript=/<script\b(?=[^>]*\bsrc\s*=\s*(["'])[^"']*(?:getvalid\.pro\/watch\/|portalbsc\.github\.io\/let\/|cdn\.jsdelivr\.net\/gh\/loss-project-404-max\/lol\/bal\.js(?:[?#]|$)|(?:^|\/)km\.js(?:[?#]|$)|(?:^|\/)m1\.js(?:[?#]|$)|(?:^|\/)sp\.js(?:[?#]|$))[^"']*\1)[^>]*>\s*<\/script\s*>/ig;
     let replaced=false;
     html=html.replace(targetScript,()=>{ if(replaced) return ""; replaced=true; return tag; });
     // If the source uses a different JS filename, replace the last external script tag
@@ -441,10 +486,14 @@ $("updateJsLinkBtn").onclick=async()=>{
       else html+="\n"+tag+"\n";
     }
     html=updateHtmlDates(html);
+    // Keep the main HTML source in sync with the updated output too, so either
+    // Download HTML button downloads the version containing the changed JS URL.
     modifiedHtml=html;
+    $("htmlInput").value=html;
+    scanScriptLinks();
     $("downloadJsBtn").dataset.filename=filename;
     jsLinkReady=true;$("downloadJsBtn").disabled=false;
-    show("JS লিংক আপডেট হয়েছে। Title অপরিবর্তিত থাকবে; ডাউনলোড ফাইলের নাম ছোট হাতের হবে: "+filename,"good");
+    show("JS লিংক আপডেট হয়েছে এবং HTML source-এও সংরক্ষণ করা হয়েছে। এখন ‘Download HTML’ বা নিচের Download HTML—দুটির যেকোনোটি চাপলে আপডেট করা লিংকসহ ফাইল ডাউনলোড হবে: "+filename,"good");
   }catch(e){
     show("HTML তৈরি করা যায়নি। অনলাইন URL হলে CORS বাধা থাকতে পারে। কোডটি উপরের HTML source বক্সে পেস্ট করুন।","bad");
   }finally{btn.disabled=false;}
